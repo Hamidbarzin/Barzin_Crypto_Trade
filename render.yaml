@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: barzincrypto
+    env: python
+    region: oregon
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: COINGECKO_API_KEY
+        value: CG-qyvm6UNyfsbBg5kSVLyy6bKS
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///app.db
