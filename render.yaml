@@ -4,8 +4,8 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "pip install -r requirements.txt && npm install && npm run build"
-    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT"
+    buildCommand: "chmod +x build.sh && ./build.sh"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
     envVars:
       - key: COINGECKO_API_KEY
         value: CG-qyvm6UNyfsbBg5kSVLyy6bKS
@@ -14,6 +14,6 @@ services:
       - key: DATABASE_URL
         value: sqlite:///app.db
       - key: PYTHON_VERSION
-        value: "3.11.0"
+        value: "3.11.9"
       - key: NODE_VERSION
         value: "18.17.0"
