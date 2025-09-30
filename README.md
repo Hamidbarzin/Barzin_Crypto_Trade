@@ -43,19 +43,32 @@ pip install -r requirements.txt
 python app.py
 ```
 
-## 🌐 Deployment on Render
+## 🌐 Deployment
 
-### Backend (Web Service)
-- **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `gunicorn app:app`
-- **Environment Variables**:
-  - `COINGECKO_API_KEY`: Your CoinGecko API key
-  - `DATABASE_URL`: PostgreSQL database URL (optional)
-  - `SESSION_SECRET`: Random secret key
+### Option 1: Separate Deployment (Recommended)
 
-### Frontend (Static Site)
-- **Build Command**: `npm install && npm run build`
-- **Publish Directory**: `dist`
+#### Backend on Render
+1. Create new Web Service on Render
+2. Connect GitHub repo
+3. Settings:
+   - **Root Directory**: `backend`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+   - **Environment Variables**:
+     - `COINGECKO_API_KEY`: CG-qyvm6UNyfsbBg5kSVLyy6bKS
+     - `SESSION_SECRET`: your-secret-key
+     - `DATABASE_URL`: sqlite:///app.db
+
+#### Frontend on Vercel
+1. Import project to Vercel
+2. Framework: Vite
+3. Build Command: `npm run build`
+4. Output Directory: `dist`
+5. Update `vercel.json` with your backend URL
+
+### Option 2: All-in-One on Render
+- Deploy as Web Service from root directory
+- Serves both API and static files
 
 ## 🔑 Environment Variables
 
