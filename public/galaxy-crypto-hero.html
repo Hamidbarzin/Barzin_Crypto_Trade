@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarzinCrypto - Galaxy Market Motion Hero</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    
+    <!-- Three.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'crypto-dark': '#0A0A0F',
+                        'crypto-gray': '#1A1A2E'
+                    },
+                    animation: {
+                        'marquee': 'marquee 25s linear infinite',
+                        'glow-pulse': 'glow-pulse 2s ease-in-out infinite alternate',
+                        'orbit': 'orbit 20s linear infinite',
+                        'sparkle': 'sparkle 3s linear infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        @keyframes glow-pulse {
+            0% { box-shadow: 0 0 20px rgba(247, 147, 26, 0.3), 0 0 40px rgba(247, 147, 26, 0.1); }
+            100% { box-shadow: 0 0 40px rgba(247, 147, 26, 0.6), 0 0 80px rgba(247, 147, 26, 0.2); }
+        }
+        
+        @keyframes orbit {
+            0% { transform: rotate(0deg) translateX(120px) rotate(0deg); }
+            100% { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+        }
+        
+        @keyframes sparkle {
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .phone-frame {
+            background: linear-gradient(145deg, #2a2a3a, #1a1a2a);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .active-glow {
+            animation: glow-pulse 2s ease-in-out infinite alternate;
+        }
+        
+        .orbit-coin {
+            animation: orbit var(--orbit-speed, 20s) linear infinite;
+        }
+        
+        .ticker-pause:hover .marquee-content {
+            animation-play-state: paused;
+        }
+        
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .orbit-coin, .active-glow, .marquee-content {
+                animation: none !important;
+            }
+        }
+        
+        /* Mobile optimization */
+        @media (max-width: 640px) {
+            .orbit-ring { display: none; }
+            .network-canvas { opacity: 0.3; }
+        }
+        
+        .swiper {
+            width: 100%;
+            padding-top: 50px;
+            padding-bottom: 50px;
+        }
+
+        .swiper-slide {
+            background-position: center;
+            background-size: cover;
+            width: 300px;
+            height: 600px;
+        }
+
+        .swiper-button-next,
+        .swiper-button-prev {
+            color: #F7931A !important;
+        }
+
+        .swiper-pagination-bullet {
+            background: #F7931A !important;
+        }
+        
+        .settings-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="bg-crypto-dark text-white overflow-x-hidden">
+    <!-- Settings Toggle -->
+    <div class="settings-toggle">
+        <button id="settingsBtn" class="glass-card rounded-lg p-2 hover:bg-white/10 transition-all">
+            ⚙️
+        </button>
+        <div id="settingsPanel" class="hidden absolute top-12 right-0 glass-card rounded-lg p-4 space-y-2 min-w-48">
+            <label class="flex items-center space-x-2"><input type="checkbox" id="galaxyToggle" checked> <span>Galaxy</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="networkToggle" checked> <span>Network</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="orbitsToggle" checked> <span>Orbits</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="tickersToggle" checked> <span>Tickers</span></label>
+        </div>
+    </div>
+
+    <!-- Hero Container -->
+    <div class="relative min-h-screen overflow-hidden">
+        <!-- Galaxy Background (Three.js) -->
+        <canvas id="galaxyWebGL" class="absolute inset-0 w-full h-full" style="z-index: 1;"></canvas>
+        
+        <!-- Market Network Layer (Canvas 2D) -->
+        <canvas id="marketNetworkCanvas" class="absolute inset-0 w-full h-full network-canvas" style="z-index: 2;"></canvas>
+        
+        <!-- Orbit Rings -->
+        <div id="orbitRings" class="absolute inset-0 w-full h-full orbit-ring" style="z-index: 3;">
+            <!-- Inner Ring: Coin Logos -->
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64">
+                <div class="coin-orbit absolute w-8 h-8 bg-orange-500 rounded-full orbit-coin" style="--orbit-speed: 15s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-purple-500 rounded-full orbit-coin" style="--orbit-speed: 18s; animation-delay: -4s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-teal-500 rounded-full orbit-coin" style="--orbit-speed: 22s; animation-delay: -8s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-blue-500 rounded-full orbit-coin" style="--orbit-speed: 25s; animation-delay: -12s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-cyan-500 rounded-full orbit-coin" style="--orbit-speed: 28s; animation-delay: -16s;"></div>
+            </div>
+            
+            <!-- Outer Ring: Partner Badges -->
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96">
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 30s;"></div>
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 35s; animation-delay: -7s;"></div>
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 40s; animation-delay: -14s;"></div>
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 45s; animation-delay: -21s;"></div>
+            </div>
+        </div>
+        
+        <!-- Top Ticker -->
+        <div id="topTicker" class="absolute top-0 left-0 right-0 bg-black/20 backdrop-blur-sm border-b border-white/10 overflow-hidden ticker-pause" style="z-index: 4;">
+            <div class="marquee-content animate-marquee flex items-center space-x-8 py-2 text-sm whitespace-nowrap">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <main class="relative z-10 min-h-screen flex items-center justify-center px-4" style="z-index: 5;">
+            <div class="w-full max-w-7xl mx-auto">
+                <!-- Header -->
+                <div class="text-center mb-8">
+                    <h1 class="text-4xl md:text-6xl font-bold bg-gradient-to-r from-white via-orange-400 to-yellow-500 bg-clip-text text-transparent mb-4">
+                        BarzinCrypto
+                    </h1>
+                    <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto">
+                        Professional platform with AI intelligence, advanced analytics and professional tools for next-generation traders
+                    </p>
+                </div>
+                
+                <!-- Swiper Slider Container -->
+                <div class="swiper crypto-slider">
+                    <div class="swiper-wrapper">
+                        <!-- Slides will be populated by JavaScript -->
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <div class="swiper-button-next"></div>
+                    <div class="swiper-button-prev"></div>
+                    <div class="swiper-pagination"></div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Ticker -->
+        <div id="bottomTicker" class="absolute bottom-0 left-0 right-0 bg-black/20 backdrop-blur-sm border-t border-white/10 overflow-hidden ticker-pause" style="z-index: 4;">
+            <div class="marquee-content animate-marquee flex items-center space-x-8 py-2 text-sm whitespace-nowrap" style="animation-direction: reverse;">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    
+    <script>
+        // TODO: Replace this simulation with real CoinGecko API integration
+        // API endpoint: https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,cardano&vs_currencies=usd&include_24hr_change=true
+        
+        // Global variables
+        let scene, camera, renderer, starFields = [];
+        let networkCanvas, networkCtx, nodes = [], edges = [];
+        let currentTheme = 'BTC';
+        let animationPaused = false;
+        let swiper;
+        
+        // Crypto data with themes
+        const cryptoData = [
+            {
+                id: 'bitcoin',
+                symbol: 'BTC',
+                name: 'Bitcoin',
+                price: 65230.12,
+                change24h: 2.34,
+                sl: 62500,
+                tp: 68000,
+                risk: 'Low',
+                nextBuy: '14:20',
+                nextSell: '16:45',
+                color: '#F7931A',
+                sparklinePoints: [62000, 63500, 64200, 65000, 65230],
+                theme: {
+                    accent: '#F7931A',
+                    nebula: ['#2b1900', '#8a4b00']
+                }
+            },
+            {
+                id: 'ethereum',
+                symbol: 'ETH',
+                name: 'Ethereum',
+                price: 2456.89,
+                change24h: 1.82,
+                sl: 2300,
+                tp: 2600,
+                risk: 'Medium',
+                nextBuy: '15:30',
+                nextSell: '17:15',
+                color: '#8A7AFF',
+                sparklinePoints: [2400, 2420, 2445, 2450, 2456],
+                theme: {
+                    accent: '#8A7AFF',
+                    nebula: ['#0b0820', '#4a3fb8']
+                }
+            },
+            {
+                id: 'solana',
+                symbol: 'SOL',
+                name: 'Solana',
+                price: 142.33,
+                change24h: -0.76,
+                sl: 135,
+                tp: 150,
+                risk: 'High',
+                nextBuy: '16:00',
+                nextSell: '18:30',
+                color: '#00E6A8',
+                sparklinePoints: [145, 143, 141, 142, 142.33],
+                theme: {
+                    accent: '#00E6A8',
+                    nebula: ['#001b1b', '#116b68']
+                }
+            },
+            {
+                id: 'ripple',
+                symbol: 'XRP',
+                name: 'Ripple',
+                price: 0.6234,
+                change24h: 0.32,
+                sl: 0.58,
+                tp: 0.68,
+                risk: 'Medium',
+                nextBuy: '17:45',
+                nextSell: '19:20',
+                color: '#4EA1FF',
+                sparklinePoints: [0.61, 0.615, 0.62, 0.622, 0.6234],
+                theme: {
+                    accent: '#4EA1FF',
+                    nebula: ['#001526', '#0c3a66']
+                }
+            },
+            {
+                id: 'cardano',
+                symbol: 'ADA',
+                name: 'Cardano',
+                price: 0.3847,
+                change24h: 1.45,
+                sl: 0.36,
+                tp: 0.42,
+                risk: 'Low',
+                nextBuy: '18:15',
+                nextSell: '20:00',
+                color: '#3AC7D0',
+                sparklinePoints: [0.375, 0.378, 0.382, 0.384, 0.3847],
+                theme: {
+                    accent: '#3AC7D0',
+                    nebula: ['#001b1f', '#0e5660']
+                }
+            }
+        ];
+
+        // Utility functions
+        const formatPrice = (price) => {
+            if (price < 1) {
+                return `$${price.toFixed(4)}`;
+            } else if (price < 100) {
+                return `$${price.toFixed(2)}`;
+            } else {
+                return `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+        };
+
+        const generateSparkline = (points, color) => {
+            const width = 80;
+            const height = 30;
+            const min = Math.min(...points);
+            const max = Math.max(...points);
+            const range = max - min || 1;
+            
+            const pathData = points.map((point, index) => {
+                const x = (index / (points.length - 1)) * width;
+                const y = height - ((point - min) / range) * height;
+                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).join(' ');
+            
+            return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="sparkline">
+                <path d="${pathData}" fill="none" stroke="${color}" stroke-width="1.5" class="animate-pulse" style="stroke-dasharray: 100; animation: sparkle 3s linear infinite;"/>
+            </svg>`;
+        };
+
+        const isWithinTradingWindow = (nextTime) => {
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            const [hours, minutes] = nextTime.split(':').map(Number);
+            const targetTime = hours * 60 + minutes;
+            return Math.abs(currentTime - targetTime) <= 30;
+        };
+
+        // Initialize Three.js Galaxy
+        const initGalaxy = () => {
+            const canvas = document.getElementById('galaxyWebGL');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            // Create star fields
+            for (let i = 0; i < 4; i++) {
+                const starCount = window.innerWidth < 640 ? 100 : 300;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(starCount * 3);
+                const colors = new Float32Array(starCount * 3);
+                
+                for (let j = 0; j < starCount; j++) {
+                    positions[j * 3] = (Math.random() - 0.5) * 100;
+                    positions[j * 3 + 1] = (Math.random() - 0.5) * 100;
+                    positions[j * 3 + 2] = (Math.random() - 0.5) * 100;
+                    
+                    const color = new THREE.Color();
+                    color.setHSL(0.1 + Math.random() * 0.1, 0.5, 0.5 + Math.random() * 0.5);
+                    colors[j * 3] = color.r;
+                    colors[j * 3 + 1] = color.g;
+                    colors[j * 3 + 2] = color.b;
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const material = new THREE.PointsMaterial({
+                    size: 0.5 + i * 0.2,
+                    vertexColors: true,
+                    blending: THREE.AdditiveBlending,
+                    transparent: true,
+                    sizeAttenuation: true
+                });
+                
+                const starField = new THREE.Points(geometry, material);
+                starFields.push(starField);
+                scene.add(starField);
+            }
+            
+            camera.position.z = 5;
+        };
+
+        // Initialize Market Network
+        const initNetwork = () => {
+            networkCanvas = document.getElementById('marketNetworkCanvas');
+            networkCtx = networkCanvas.getContext('2d');
+            
+            const resizeNetwork = () => {
+                networkCanvas.width = window.innerWidth;
+                networkCanvas.height = window.innerHeight;
+                
+                // Create nodes
+                const nodeCount = window.innerWidth < 640 ? 20 : window.innerWidth < 1024 ? 40 : 60;
+                nodes = [];
+                for (let i = 0; i < nodeCount; i++) {
+                    nodes.push({
+                        x: Math.random() * networkCanvas.width,
+                        y: Math.random() * networkCanvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: 2 + Math.random() * 3,
+                        pulse: 0
+                    });
+                }
+            };
+            
+            resizeNetwork();
+            window.addEventListener('resize', resizeNetwork);
+        };
+
+        // Create phone slide HTML
+        const createPhoneSlide = (coin) => {
+            const changeColor = coin.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400';
+            const changeIcon = coin.change24h >= 0 ? '▲' : '▼';
+            const canBuy = isWithinTradingWindow(coin.nextBuy);
+            const canSell = isWithinTradingWindow(coin.nextSell);
+            
+            const riskColors = {
+                'Low': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                'Medium': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                'High': 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+            };
+
+            return `
+                <div class="swiper-slide flex justify-center items-center">
+                    <div class="phone-frame w-72 h-[580px] rounded-[3rem] p-6 relative transform-gpu transition-all duration-700">
+                        <div class="glass-card rounded-3xl h-full p-6 relative overflow-hidden">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center" style="color: ${coin.color}">
+                                        <div class="w-6 h-6 rounded-full" style="background-color: ${coin.color}"></div>
+                                    </div>
+                                    <div class="text-left">
+                                        <div class="font-bold text-lg">${coin.symbol}</div>
+                                        <div class="text-gray-400 text-sm">${coin.name}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-1 ${changeColor}">
+                                    <span class="text-xs">${changeIcon}</span>
+                                    <span class="text-sm font-medium">${Math.abs(coin.change24h).toFixed(2)}%</span>
+                                </div>
+                            </div>
+
+                            <!-- Price -->
+                            <div class="text-center mb-6">
+                                <div class="text-3xl font-bold mb-1 price-display">${formatPrice(coin.price)}</div>
+                                <div class="text-gray-400 text-sm">Current Price</div>
+                            </div>
+
+                            <!-- Sparkline -->
+                            <div class="flex justify-center mb-6">
+                                ${generateSparkline(coin.sparklinePoints, coin.color)}
+                            </div>
+
+                            <!-- Strategy Panel -->
+                            <div class="glass-card rounded-2xl p-4 mb-6">
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div class="text-center">
+                                        <div class="text-gray-400 text-xs">Stop Loss</div>
+                                        <div class="text-rose-400 font-semibold">${formatPrice(coin.sl)}</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-gray-400 text-xs">Take Profit</div>
+                                        <div class="text-emerald-400 font-semibold">${formatPrice(coin.tp)}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-center">
+                                    <div class="text-center">
+                                        <div class="text-gray-400 text-xs">Risk Level</div>
+                                        <span class="inline-block px-2 py-1 rounded-full text-xs border ${riskColors[coin.risk]}">${coin.risk}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Trading Times -->
+                            <div class="glass-card rounded-2xl p-3 mb-6">
+                                <div class="grid grid-cols-2 gap-3 text-xs">
+                                    <div class="text-center">
+                                        <div class="text-gray-400">Next Buy</div>
+                                        <div class="text-emerald-400 font-medium">${coin.nextBuy}</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-gray-400">Next Sell</div>
+                                        <div class="text-amber-400 font-medium">${coin.nextSell}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <button class="py-3 px-4 rounded-2xl font-semibold text-sm transition-all duration-300 ${canBuy ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}" ${!canBuy ? 'disabled' : ''}>
+                                    Buy
+                                </button>
+                                <button class="py-3 px-4 rounded-2xl font-semibold text-sm transition-all duration-300 ${canSell ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}" ${!canSell ? 'disabled' : ''}>
+                                    Sell
+                                </button>
+                            </div>
+
+                            <!-- Disclaimer -->
+                            <div class="text-center">
+                                <div class="text-gray-500 text-xs">Not financial advice</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        // Update theme based on active slide
+        const updateTheme = (coinData) => {
+            currentTheme = coinData.symbol;
+            const theme = coinData.theme;
+            
+            // Update galaxy colors
+            if (starFields.length > 0) {
+                starFields.forEach((starField, index) => {
+                    const color = new THREE.Color(theme.nebula[index % 2]);
+                    starField.material.color = color;
+                });
+            }
+            
+            // Update orbit speeds
+            document.querySelectorAll('.orbit-coin').forEach((coin, index) => {
+                const speed = index === cryptoData.findIndex(c => c.symbol === coinData.symbol) ? '12s' : '20s';
+                coin.style.setProperty('--orbit-speed', speed);
+            });
+            
+            // Update page accent
+            document.documentElement.style.setProperty('--theme-accent', theme.accent);
+        };
+
+        // Initialize tickers
+        const initTickers = () => {
+            const updateTickers = () => {
+                const tickerData = cryptoData.map(coin => {
+                    const changeClass = coin.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                    const changeIcon = coin.change24h >= 0 ? '▲' : '▼';
+                    return `
+                        <div class="flex items-center space-x-2">
+                            <span class="font-semibold">${coin.symbol}</span>
+                            <span>${formatPrice(coin.price)}</span>
+                            <span class="${changeClass}">${changeIcon} ${Math.abs(coin.change24h).toFixed(2)}%</span>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.querySelector('#topTicker .marquee-content').innerHTML = tickerData.repeat(3);
+                document.querySelector('#bottomTicker .marquee-content').innerHTML = tickerData.repeat(3);
+            };
+            
+            updateTickers();
+            setInterval(updateTickers, 5000);
+        };
+
+        // Animation loop
+        const animate = () => {
+            if (animationPaused) return;
+            
+            requestAnimationFrame(animate);
+            
+            // Galaxy animation
+            if (scene && camera && renderer && document.getElementById('galaxyToggle').checked) {
+                starFields.forEach((starField, index) => {
+                    starField.rotation.y += 0.0002 * (index + 1);
+                    starField.rotation.x += 0.0001 * (index + 1);
+                });
+                
+                renderer.render(scene, camera);
+            }
+            
+            // Network animation
+            if (networkCtx && document.getElementById('networkToggle').checked) {
+                networkCtx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
+                
+                // Update nodes
+                nodes.forEach(node => {
+                    node.x += node.vx;
+                    node.y += node.vy;
+                    
+                    if (node.x < 0 || node.x > networkCanvas.width) node.vx *= -1;
+                    if (node.y < 0 || node.y > networkCanvas.height) node.vy *= -1;
+                    
+                    node.pulse = Math.max(0, node.pulse - 0.02);
+                });
+                
+                // Draw edges
+                networkCtx.strokeStyle = `rgba(${currentTheme === 'BTC' ? '247,147,26' : '138,122,255'}, 0.1)`;
+                networkCtx.lineWidth = 1;
+                nodes.forEach((node, i) => {
+                    nodes.slice(i + 1).forEach(otherNode => {
+                        const dx = node.x - otherNode.x;
+                        const dy = node.y - otherNode.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < 100) {
+                            networkCtx.beginPath();
+                            networkCtx.moveTo(node.x, node.y);
+                            networkCtx.lineTo(otherNode.x, otherNode.y);
+                            networkCtx.stroke();
+                        }
+                    });
+                });
+                
+                // Draw nodes
+                nodes.forEach(node => {
+                    const alpha = 0.3 + node.pulse * 0.7;
+                    networkCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+                    networkCtx.beginPath();
+                    networkCtx.arc(node.x, node.y, node.size, 0, Math.PI * 2);
+                    networkCtx.fill();
+                });
+            }
+        };
+
+        // Price simulation
+        const simulatePriceUpdates = () => {
+            cryptoData.forEach(coin => {
+                const changePercent = (Math.random() - 0.5) * 0.008;
+                coin.price = Math.max(0.0001, coin.price * (1 + changePercent));
+                coin.change24h += changePercent * 100 * 0.1;
+                coin.sparklinePoints.shift();
+                coin.sparklinePoints.push(coin.price);
+                
+                // Trigger network pulse
+                if (nodes.length > 0) {
+                    const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+                    randomNode.pulse = 1;
+                }
+            });
+        };
+
+        // Initialize everything
+        const init = () => {
+            // Populate slides
+            const swiperWrapper = document.querySelector('.swiper-wrapper');
+            cryptoData.forEach(coin => {
+                swiperWrapper.innerHTML += createPhoneSlide(coin);
+            });
+
+            // Initialize Swiper
+            swiper = new Swiper('.crypto-slider', {
+                effect: 'coverflow',
+                grabCursor: true,
+                centeredSlides: true,
+                loop: true,
+                slidesPerView: 'auto',
+                coverflowEffect: {
+                    rotate: 15,
+                    stretch: 0,
+                    depth: 200,
+                    modifier: 1,
+                    slideShadows: true,
+                },
+                autoplay: {
+                    delay: 4800,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                    dynamicBullets: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                keyboard: {
+                    enabled: true,
+                    onlyInViewport: true,
+                },
+                mousewheel: {
+                    thresholdDelta: 50,
+                },
+                breakpoints: {
+                    320: {
+                        slidesPerView: 1,
+                        spaceBetween: 20,
+                        coverflowEffect: { rotate: 0, depth: 100 },
+                    },
+                    641: {
+                        slidesPerView: 3,
+                        spaceBetween: 30,
+                        coverflowEffect: { rotate: 10, depth: 150 },
+                    },
+                    1025: {
+                        slidesPerView: 5,
+                        spaceBetween: 40,
+                        coverflowEffect: { rotate: 15, depth: 200 },
+                    },
+                },
+                on: {
+                    slideChange: function() {
+                        const activeIndex = this.realIndex;
+                        updateTheme(cryptoData[activeIndex]);
+                        
+                        document.querySelectorAll('.phone-frame').forEach(frame => {
+                            frame.classList.remove('active-glow');
+                        });
+                        
+                        const activeSlide = document.querySelector('.swiper-slide-active .phone-frame');
+                        if (activeSlide) {
+                            activeSlide.classList.add('active-glow');
+                        }
+                    }
+                }
+            });
+
+            // Initialize components
+            initGalaxy();
+            initNetwork();
+            initTickers();
+            
+            // Start animations
+            animate();
+            
+            // Start price simulation
+            setInterval(simulatePriceUpdates, 3500);
+            
+            // Settings panel
+            document.getElementById('settingsBtn').addEventListener('click', () => {
+                document.getElementById('settingsPanel').classList.toggle('hidden');
+            });
+            
+            // Visibility API
+            document.addEventListener('visibilitychange', () => {
+                animationPaused = document.hidden;
+                if (!animationPaused) animate();
+            });
+            
+            // Initial theme
+            updateTheme(cryptoData[0]);
+            
+            // Initial active glow
+            setTimeout(() => {
+                const activeSlide = document.querySelector('.swiper-slide-active .phone-frame');
+                if (activeSlide) {
+                    activeSlide.classList.add('active-glow');
+                }
+            }, 500);
+        };
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Start when DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

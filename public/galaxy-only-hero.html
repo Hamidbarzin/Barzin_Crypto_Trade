@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarzinCrypto - Galaxy Hero</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Three.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'crypto-dark': '#0A0A0F',
+                        'crypto-gray': '#1A1A2E'
+                    },
+                    animation: {
+                        'glow-pulse': 'glow-pulse 3s ease-in-out infinite alternate',
+                        'float': 'float 6s ease-in-out infinite',
+                        'fade-in': 'fade-in 2s ease-out',
+                        'theme-pulse': 'theme-pulse 1.2s ease-in-out'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @keyframes glow-pulse {
+            0% { box-shadow: 0 0 20px rgba(247, 147, 26, 0.3), 0 0 40px rgba(247, 147, 26, 0.1); }
+            100% { box-shadow: 0 0 40px rgba(247, 147, 26, 0.6), 0 0 80px rgba(247, 147, 26, 0.2); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes fade-in {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes theme-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        
+        
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .animate-glow-pulse, .animate-float, .theme-dot.active {
+                animation: none !important;
+            }
+        }
+        
+        /* Mobile optimization */
+        @media (max-width: 640px) {
+            .glass-chip {
+                backdrop-filter: blur(10px);
+            }
+        }
+        
+        /* Shooting star trail */
+        .shooting-star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: linear-gradient(45deg, transparent, #fff, transparent);
+            border-radius: 50%;
+            animation: shoot 3s linear;
+            opacity: 0;
+        }
+        
+        @keyframes shoot {
+            0% {
+                opacity: 0;
+                transform: translateX(-100px) translateY(100px);
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(300px) translateY(-300px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-crypto-dark text-white overflow-hidden">
+    <!-- Galaxy Background Canvas -->
+    <canvas id="galaxyWebGL" class="absolute inset-0 w-full h-full"></canvas>
+    
+    <!-- Pure Galaxy Background - No Content -->
+    
+    <script>
+        // Global variables
+        let scene, camera, renderer, starField, nebulaPlane;
+        let animationPaused = false;
+        let currentThemeIndex = 0;
+        let themeTimer = 0;
+        let lastTime = 0;
+        let deltaTime = 0;
+        let mouse = { x: 0, y: 0 };
+        
+        // Theme definitions
+        const THEMES = [
+            { name: 'BTC', colors: ['#2b1900', '#8a4b00'], accent: '#F7931A', accentLight: '#FFB347' },
+            { name: 'ETH', colors: ['#0b0820', '#4a3fb8'], accent: '#8A7AFF', accentLight: '#B8A7FF' },
+            { name: 'SOL', colors: ['#001b1b', '#116b68'], accent: '#00E6A8', accentLight: '#33F0C0' },
+            { name: 'XRP', colors: ['#001526', '#0c3a66'], accent: '#4EA1FF', accentLight: '#7BB8FF' },
+            { name: 'ADA', colors: ['#001b1f', '#0e5660'], accent: '#3AC7D0', accentLight: '#67D4DD' }
+        ];
+        
+        // Nebula shader
+        const nebulaVertexShader = `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        
+        const nebulaFragmentShader = `
+            uniform float u_time;
+            uniform vec3 u_color1;
+            uniform vec3 u_color2;
+            varying vec2 vUv;
+            
+            float noise(vec2 p) {
+                return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+            }
+            
+            float smoothNoise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                
+                float a = noise(i);
+                float b = noise(i + vec2(1.0, 0.0));
+                float c = noise(i + vec2(0.0, 1.0));
+                float d = noise(i + vec2(1.0, 1.0));
+                
+                return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+            }
+            
+            float fbm(vec2 p) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                for(int i = 0; i < 6; i++) {
+                    value += amplitude * smoothNoise(p);
+                    p *= 2.0;
+                    amplitude *= 0.5;
+                }
+                return value;
+            }
+            
+            void main() {
+                vec2 uv = vUv;
+                vec2 center = vec2(0.5, 0.5);
+                float dist = distance(uv, center);
+                
+                // Animated noise
+                vec2 noiseUv = uv * 3.0 + u_time * 0.1;
+                float noiseValue = fbm(noiseUv);
+                
+                // Radial gradient
+                float radial = 1.0 - smoothstep(0.0, 0.8, dist);
+                
+                // Combine noise and radial
+                float alpha = radial * (0.3 + 0.4 * noiseValue);
+                
+                // Color mixing
+                vec3 color = mix(u_color1, u_color2, noiseValue);
+                
+                gl_FragColor = vec4(color, alpha * 0.6);
+            }
+        `;
+        
+        // Initialize Three.js
+        const initGalaxy = () => {
+            const canvas = document.getElementById('galaxyWebGL');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            // Create starfield
+            createStarField();
+            
+            // Create nebula
+            createNebula();
+            
+            camera.position.z = 5;
+            
+            // Mouse parallax
+            document.addEventListener('mousemove', (event) => {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            });
+        };
+        
+        const createStarField = () => {
+            const starCount = window.innerWidth < 640 ? 800 : 2000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(starCount * 3);
+            const colors = new Float32Array(starCount * 3);
+            const sizes = new Float32Array(starCount);
+            
+            for (let i = 0; i < starCount; i++) {
+                // Distribute in sphere
+                const radius = 20 + Math.random() * 30;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                
+                positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = radius * Math.cos(phi);
+                
+                // Random colors (white to blue-white)
+                const color = new THREE.Color();
+                color.setHSL(0.6 + Math.random() * 0.1, 0.2 + Math.random() * 0.3, 0.7 + Math.random() * 0.3);
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+                
+                // Random sizes
+                sizes[i] = 0.5 + Math.random() * 1.5;
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            const material = new THREE.PointsMaterial({
+                size: 1,
+                sizeAttenuation: true,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            starField = new THREE.Points(geometry, material);
+            scene.add(starField);
+        };
+        
+        const createNebula = () => {
+            const geometry = new THREE.PlaneGeometry(50, 50);
+            const material = new THREE.ShaderMaterial({
+                vertexShader: nebulaVertexShader,
+                fragmentShader: nebulaFragmentShader,
+                uniforms: {
+                    u_time: { value: 0 },
+                    u_color1: { value: new THREE.Color(THEMES[0].colors[0]) },
+                    u_color2: { value: new THREE.Color(THEMES[0].colors[1]) }
+                },
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            nebulaPlane = new THREE.Mesh(geometry, material);
+            nebulaPlane.position.z = -10;
+            scene.add(nebulaPlane);
+        };
+        
+        // Theme management
+        const updateTheme = (themeIndex, animate = true) => {
+            const theme = THEMES[themeIndex];
+            currentThemeIndex = themeIndex;
+            
+            // Update CSS variables
+            document.documentElement.style.setProperty('--theme-accent', theme.accent);
+            document.documentElement.style.setProperty('--theme-accent-light', theme.accentLight);
+            
+            // Update nebula colors
+            if (nebulaPlane) {
+                const material = nebulaPlane.material;
+                if (animate) {
+                    // Smooth transition
+                    const startColor1 = material.uniforms.u_color1.value.clone();
+                    const startColor2 = material.uniforms.u_color2.value.clone();
+                    const targetColor1 = new THREE.Color(theme.colors[0]);
+                    const targetColor2 = new THREE.Color(theme.colors[1]);
+                    
+                    let progress = 0;
+                    const transition = () => {
+                        progress += 0.02;
+                        if (progress <= 1) {
+                            material.uniforms.u_color1.value.lerpColors(startColor1, targetColor1, progress);
+                            material.uniforms.u_color2.value.lerpColors(startColor2, targetColor2, progress);
+                            requestAnimationFrame(transition);
+                        }
+                    };
+                    transition();
+                } else {
+                    material.uniforms.u_color1.value.set(theme.colors[0]);
+                    material.uniforms.u_color2.value.set(theme.colors[1]);
+                }
+            }
+            
+        };
+        
+        // Shooting star effect
+        const createShootingStar = () => {
+            if (Math.random() < 0.02) { // 2% chance per frame at 60fps = ~1.2 per second
+                const star = document.createElement('div');
+                star.className = 'shooting-star';
+                star.style.left = Math.random() * window.innerWidth + 'px';
+                star.style.top = Math.random() * window.innerHeight + 'px';
+                document.body.appendChild(star);
+                
+                setTimeout(() => {
+                    if (star.parentNode) {
+                        star.parentNode.removeChild(star);
+                    }
+                }, 3000);
+            }
+        };
+        
+        // Animation loop
+        const animate = (currentTime) => {
+            if (animationPaused) return;
+            
+            requestAnimationFrame(animate);
+            
+            deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            
+            // Limit to 30fps on low-end devices
+            if (deltaTime < 33) return;
+            
+            // Update time uniform
+            if (nebulaPlane) {
+                nebulaPlane.material.uniforms.u_time.value = currentTime * 0.001;
+            }
+            
+            // Rotate starfield
+            if (starField) {
+                starField.rotation.y += 0.0002;
+                starField.rotation.x += 0.0001;
+                
+                // Parallax effect
+                const parallaxStrength = window.innerWidth < 640 ? 0.02 : 0.05;
+                starField.rotation.z = mouse.x * parallaxStrength;
+                starField.position.x = mouse.x * parallaxStrength * 2;
+                starField.position.y = mouse.y * parallaxStrength;
+            }
+            
+            // Auto theme cycling
+            themeTimer += deltaTime;
+            if (themeTimer >= 6000) { // 6 seconds
+                themeTimer = 0;
+                const nextTheme = (currentThemeIndex + 1) % THEMES.length;
+                updateTheme(nextTheme);
+            }
+            
+            // Shooting stars
+            createShootingStar();
+            
+            renderer.render(scene, camera);
+        };
+        
+        // Event handlers
+        const setupEventHandlers = () => {
+            // Visibility API
+            document.addEventListener('visibilitychange', () => {
+                animationPaused = document.hidden;
+                if (!animationPaused) {
+                    lastTime = performance.now();
+                    animate(lastTime);
+                }
+            });
+            
+            // Resize handler
+            window.addEventListener('resize', () => {
+                if (camera && renderer) {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+            });
+            
+            // Respect reduced motion
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                animationPaused = true;
+            }
+        };
+        
+        // Initialize everything
+        const init = () => {
+            initGalaxy();
+            setupEventHandlers();
+            updateTheme(0, false);
+            
+            // Start animation
+            lastTime = performance.now();
+            animate(lastTime);
+        };
+        
+        // Start when DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

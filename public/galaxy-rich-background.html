@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Rich Background</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Three.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'crypto-dark': '#0A0A0F',
+                        'crypto-gray': '#1A1A2E'
+                    },
+                    animation: {
+                        'marquee': 'marquee 25s linear infinite',
+                        'glow-pulse': 'glow-pulse 2s ease-in-out infinite alternate',
+                        'orbit': 'orbit 20s linear infinite',
+                        'sparkle': 'sparkle 3s linear infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        @keyframes glow-pulse {
+            0% { box-shadow: 0 0 20px rgba(247, 147, 26, 0.3), 0 0 40px rgba(247, 147, 26, 0.1); }
+            100% { box-shadow: 0 0 40px rgba(247, 147, 26, 0.6), 0 0 80px rgba(247, 147, 26, 0.2); }
+        }
+        
+        @keyframes orbit {
+            0% { transform: rotate(0deg) translateX(120px) rotate(0deg); }
+            100% { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
+        }
+        
+        @keyframes sparkle {
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .active-glow {
+            animation: glow-pulse 2s ease-in-out infinite alternate;
+        }
+        
+        .orbit-coin {
+            animation: orbit var(--orbit-speed, 20s) linear infinite;
+        }
+        
+        .ticker-pause:hover .marquee-content {
+            animation-play-state: paused;
+        }
+        
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .orbit-coin, .active-glow, .marquee-content {
+                animation: none !important;
+            }
+        }
+        
+        /* Mobile optimization */
+        @media (max-width: 640px) {
+            .orbit-ring { display: none; }
+            .network-canvas { opacity: 0.3; }
+        }
+        
+        .settings-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-crypto-dark text-white overflow-x-hidden">
+    <!-- Settings Toggle -->
+    <div class="settings-toggle">
+        <button id="settingsBtn" class="glass-card rounded-lg p-2 hover:bg-white/10 transition-all">
+            ⚙️
+        </button>
+        <div id="settingsPanel" class="hidden absolute top-12 right-0 glass-card rounded-lg p-4 space-y-2 min-w-48">
+            <label class="flex items-center space-x-2"><input type="checkbox" id="galaxyToggle" checked> <span>Galaxy</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="networkToggle" checked> <span>Network</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="orbitsToggle" checked> <span>Orbits</span></label>
+            <label class="flex items-center space-x-2"><input type="checkbox" id="tickersToggle" checked> <span>Tickers</span></label>
+        </div>
+    </div>
+
+    <!-- Hero Container -->
+    <div class="relative min-h-screen overflow-hidden">
+        <!-- Galaxy Background (Three.js) -->
+        <canvas id="galaxyWebGL" class="absolute inset-0 w-full h-full" style="z-index: 1;"></canvas>
+        
+        <!-- Market Network Layer (Canvas 2D) -->
+        <canvas id="marketNetworkCanvas" class="absolute inset-0 w-full h-full network-canvas" style="z-index: 2;"></canvas>
+        
+        <!-- Orbit Rings -->
+        <div id="orbitRings" class="absolute inset-0 w-full h-full orbit-ring" style="z-index: 3;">
+            <!-- Inner Ring: Coin Logos -->
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64">
+                <div class="coin-orbit absolute w-8 h-8 bg-orange-500 rounded-full orbit-coin" style="--orbit-speed: 15s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-purple-500 rounded-full orbit-coin" style="--orbit-speed: 18s; animation-delay: -4s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-teal-500 rounded-full orbit-coin" style="--orbit-speed: 22s; animation-delay: -8s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-blue-500 rounded-full orbit-coin" style="--orbit-speed: 25s; animation-delay: -12s;"></div>
+                <div class="coin-orbit absolute w-8 h-8 bg-cyan-500 rounded-full orbit-coin" style="--orbit-speed: 28s; animation-delay: -16s;"></div>
+            </div>
+            
+            <!-- Outer Ring: Partner Badges -->
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96">
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 30s;"></div>
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 35s; animation-delay: -7s;"></div>
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 40s; animation-delay: -14s;"></div>
+                <div class="partner-orbit absolute w-12 h-6 bg-white/10 rounded orbit-coin" style="--orbit-speed: 45s; animation-delay: -21s;"></div>
+            </div>
+        </div>
+        
+        <!-- Top Ticker -->
+        <div id="topTicker" class="absolute top-0 left-0 right-0 bg-black/20 backdrop-blur-sm border-b border-white/10 overflow-hidden ticker-pause" style="z-index: 4;">
+            <div class="marquee-content animate-marquee flex items-center space-x-8 py-2 text-sm whitespace-nowrap">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Bottom Ticker -->
+        <div id="bottomTicker" class="absolute bottom-0 left-0 right-0 bg-black/20 backdrop-blur-sm border-t border-white/10 overflow-hidden ticker-pause" style="z-index: 4;">
+            <div class="marquee-content animate-marquee flex items-center space-x-8 py-2 text-sm whitespace-nowrap" style="animation-direction: reverse;">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let scene, camera, renderer, starFields = [];
+        let networkCanvas, networkCtx, nodes = [], edges = [];
+        let currentTheme = 'BTC';
+        let animationPaused = false;
+        
+        // Crypto data with themes
+        const cryptoData = [
+            {
+                id: 'bitcoin',
+                symbol: 'BTC',
+                name: 'Bitcoin',
+                price: 65230.12,
+                change24h: 2.34,
+                color: '#F7931A',
+                theme: {
+                    accent: '#F7931A',
+                    nebula: ['#2b1900', '#8a4b00']
+                }
+            },
+            {
+                id: 'ethereum',
+                symbol: 'ETH',
+                name: 'Ethereum',
+                price: 2456.89,
+                change24h: 1.82,
+                color: '#8A7AFF',
+                theme: {
+                    accent: '#8A7AFF',
+                    nebula: ['#0b0820', '#4a3fb8']
+                }
+            },
+            {
+                id: 'solana',
+                symbol: 'SOL',
+                name: 'Solana',
+                price: 142.33,
+                change24h: -0.76,
+                color: '#00E6A8',
+                theme: {
+                    accent: '#00E6A8',
+                    nebula: ['#001b1b', '#116b68']
+                }
+            },
+            {
+                id: 'ripple',
+                symbol: 'XRP',
+                name: 'Ripple',
+                price: 0.6234,
+                change24h: 0.32,
+                color: '#4EA1FF',
+                theme: {
+                    accent: '#4EA1FF',
+                    nebula: ['#001526', '#0c3a66']
+                }
+            },
+            {
+                id: 'cardano',
+                symbol: 'ADA',
+                name: 'Cardano',
+                price: 0.3847,
+                change24h: 1.45,
+                color: '#3AC7D0',
+                theme: {
+                    accent: '#3AC7D0',
+                    nebula: ['#001b1f', '#0e5660']
+                }
+            }
+        ];
+
+        // Utility functions
+        const formatPrice = (price) => {
+            if (price < 1) {
+                return `$${price.toFixed(4)}`;
+            } else if (price < 100) {
+                return `$${price.toFixed(2)}`;
+            } else {
+                return `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+        };
+
+        // Initialize Three.js Galaxy
+        const initGalaxy = () => {
+            const canvas = document.getElementById('galaxyWebGL');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            // Create star fields
+            for (let i = 0; i < 4; i++) {
+                const starCount = window.innerWidth < 640 ? 100 : 300;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(starCount * 3);
+                const colors = new Float32Array(starCount * 3);
+                
+                for (let j = 0; j < starCount; j++) {
+                    positions[j * 3] = (Math.random() - 0.5) * 100;
+                    positions[j * 3 + 1] = (Math.random() - 0.5) * 100;
+                    positions[j * 3 + 2] = (Math.random() - 0.5) * 100;
+                    
+                    const color = new THREE.Color();
+                    color.setHSL(0.1 + Math.random() * 0.1, 0.5, 0.5 + Math.random() * 0.5);
+                    colors[j * 3] = color.r;
+                    colors[j * 3 + 1] = color.g;
+                    colors[j * 3 + 2] = color.b;
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const material = new THREE.PointsMaterial({
+                    size: 0.5 + i * 0.2,
+                    vertexColors: true,
+                    blending: THREE.AdditiveBlending,
+                    transparent: true,
+                    sizeAttenuation: true
+                });
+                
+                const starField = new THREE.Points(geometry, material);
+                starFields.push(starField);
+                scene.add(starField);
+            }
+            
+            camera.position.z = 5;
+        };
+
+        // Initialize Market Network
+        const initNetwork = () => {
+            networkCanvas = document.getElementById('marketNetworkCanvas');
+            networkCtx = networkCanvas.getContext('2d');
+            
+            const resizeNetwork = () => {
+                networkCanvas.width = window.innerWidth;
+                networkCanvas.height = window.innerHeight;
+                
+                // Create nodes
+                const nodeCount = window.innerWidth < 640 ? 20 : window.innerWidth < 1024 ? 40 : 60;
+                nodes = [];
+                for (let i = 0; i < nodeCount; i++) {
+                    nodes.push({
+                        x: Math.random() * networkCanvas.width,
+                        y: Math.random() * networkCanvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: 2 + Math.random() * 3,
+                        pulse: 0
+                    });
+                }
+            };
+            
+            resizeNetwork();
+            window.addEventListener('resize', resizeNetwork);
+        };
+
+        // Update theme based on cycle
+        const updateTheme = (coinData) => {
+            currentTheme = coinData.symbol;
+            const theme = coinData.theme;
+            
+            // Update galaxy colors
+            if (starFields.length > 0) {
+                starFields.forEach((starField, index) => {
+                    const color = new THREE.Color(theme.nebula[index % 2]);
+                    starField.material.color = color;
+                });
+            }
+            
+            // Update orbit speeds
+            document.querySelectorAll('.orbit-coin').forEach((coin, index) => {
+                const speed = index === cryptoData.findIndex(c => c.symbol === coinData.symbol) ? '12s' : '20s';
+                coin.style.setProperty('--orbit-speed', speed);
+            });
+            
+            // Update page accent
+            document.documentElement.style.setProperty('--theme-accent', theme.accent);
+        };
+
+        // Initialize tickers
+        const initTickers = () => {
+            const updateTickers = () => {
+                const tickerData = cryptoData.map(coin => {
+                    const changeClass = coin.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                    const changeIcon = coin.change24h >= 0 ? '▲' : '▼';
+                    return `
+                        <div class="flex items-center space-x-2">
+                            <span class="font-semibold">${coin.symbol}</span>
+                            <span>${formatPrice(coin.price)}</span>
+                            <span class="${changeClass}">${changeIcon} ${Math.abs(coin.change24h).toFixed(2)}%</span>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.querySelector('#topTicker .marquee-content').innerHTML = tickerData.repeat(3);
+                document.querySelector('#bottomTicker .marquee-content').innerHTML = tickerData.repeat(3);
+            };
+            
+            updateTickers();
+            setInterval(updateTickers, 5000);
+        };
+
+        // Animation loop
+        const animate = () => {
+            if (animationPaused) return;
+            
+            requestAnimationFrame(animate);
+            
+            // Galaxy animation
+            if (scene && camera && renderer && document.getElementById('galaxyToggle').checked) {
+                starFields.forEach((starField, index) => {
+                    starField.rotation.y += 0.0002 * (index + 1);
+                    starField.rotation.x += 0.0001 * (index + 1);
+                });
+                
+                renderer.render(scene, camera);
+            }
+            
+            // Network animation
+            if (networkCtx && document.getElementById('networkToggle').checked) {
+                networkCtx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
+                
+                // Update nodes
+                nodes.forEach(node => {
+                    node.x += node.vx;
+                    node.y += node.vy;
+                    
+                    if (node.x < 0 || node.x > networkCanvas.width) node.vx *= -1;
+                    if (node.y < 0 || node.y > networkCanvas.height) node.vy *= -1;
+                    
+                    node.pulse = Math.max(0, node.pulse - 0.02);
+                });
+                
+                // Draw edges
+                networkCtx.strokeStyle = `rgba(${currentTheme === 'BTC' ? '247,147,26' : '138,122,255'}, 0.1)`;
+                networkCtx.lineWidth = 1;
+                nodes.forEach((node, i) => {
+                    nodes.slice(i + 1).forEach(otherNode => {
+                        const dx = node.x - otherNode.x;
+                        const dy = node.y - otherNode.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < 100) {
+                            networkCtx.beginPath();
+                            networkCtx.moveTo(node.x, node.y);
+                            networkCtx.lineTo(otherNode.x, otherNode.y);
+                            networkCtx.stroke();
+                        }
+                    });
+                });
+                
+                // Draw nodes
+                nodes.forEach(node => {
+                    const alpha = 0.3 + node.pulse * 0.7;
+                    networkCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+                    networkCtx.beginPath();
+                    networkCtx.arc(node.x, node.y, node.size, 0, Math.PI * 2);
+                    networkCtx.fill();
+                });
+            }
+        };
+
+        // Price simulation
+        const simulatePriceUpdates = () => {
+            cryptoData.forEach(coin => {
+                const changePercent = (Math.random() - 0.5) * 0.008;
+                coin.price = Math.max(0.0001, coin.price * (1 + changePercent));
+                coin.change24h += changePercent * 100 * 0.1;
+                
+                // Trigger network pulse
+                if (nodes.length > 0) {
+                    const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+                    randomNode.pulse = 1;
+                }
+            });
+        };
+
+        // Theme cycling
+        let themeIndex = 0;
+        const cycleThemes = () => {
+            updateTheme(cryptoData[themeIndex]);
+            themeIndex = (themeIndex + 1) % cryptoData.length;
+        };
+
+        // Initialize everything
+        const init = () => {
+            // Initialize components
+            initGalaxy();
+            initNetwork();
+            initTickers();
+            
+            // Start animations
+            animate();
+            
+            // Start price simulation
+            setInterval(simulatePriceUpdates, 3500);
+            
+            // Start theme cycling every 6 seconds
+            setInterval(cycleThemes, 6000);
+            
+            // Settings panel
+            document.getElementById('settingsBtn').addEventListener('click', () => {
+                document.getElementById('settingsPanel').classList.toggle('hidden');
+            });
+            
+            // Toggle controls
+            document.getElementById('galaxyToggle').addEventListener('change', (e) => {
+                document.getElementById('galaxyWebGL').style.display = e.target.checked ? 'block' : 'none';
+            });
+            
+            document.getElementById('networkToggle').addEventListener('change', (e) => {
+                document.getElementById('marketNetworkCanvas').style.display = e.target.checked ? 'block' : 'none';
+            });
+            
+            document.getElementById('orbitsToggle').addEventListener('change', (e) => {
+                document.getElementById('orbitRings').style.display = e.target.checked ? 'block' : 'none';
+            });
+            
+            document.getElementById('tickersToggle').addEventListener('change', (e) => {
+                const display = e.target.checked ? 'block' : 'none';
+                document.getElementById('topTicker').style.display = display;
+                document.getElementById('bottomTicker').style.display = display;
+            });
+            
+            // Visibility API
+            document.addEventListener('visibilitychange', () => {
+                animationPaused = document.hidden;
+                if (!animationPaused) animate();
+            });
+            
+            // Initial theme
+            updateTheme(cryptoData[0]);
+        };
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Start when DOM is ready
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

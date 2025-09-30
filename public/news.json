@@ -1,0 +1,67 @@
+
+[
+  {
+    "id": "news1",
+    "title": "بیت‌کوین در نزدیکی سطح مقاومت 100,000 دلاری",
+    "source": "BarzinCrypto",
+    "url": "#",
+    "published_at": "2025-01-09T12:00:00Z",
+    "tags": ["BTC", "Market"]
+  },
+  {
+    "id": "news2", 
+    "title": "اتریوم 2.0 و تحولات جدید در شبکه",
+    "source": "Crypto News",
+    "url": "#",
+    "published_at": "2025-01-09T10:30:00Z",
+    "tags": ["ETH", "Technology"]
+  },
+  {
+    "id": "news3",
+    "title": "سولانا رکورد جدیدی در تراکنش‌های روزانه ثبت کرد", 
+    "source": "DeFi Report",
+    "url": "#",
+    "published_at": "2025-01-09T08:15:00Z",
+    "tags": ["SOL", "DeFi"]
+  },
+  {
+    "id": "news4",
+    "title": "تحلیل تکنیکال: آلت‌کوین‌ها در آستانه رشد بزرگ",
+    "source": "Technical Analysis",
+    "url": "#", 
+    "published_at": "2025-01-08T16:45:00Z",
+    "tags": ["Analysis", "Altcoins"]
+  },
+  {
+    "id": "news5",
+    "title": "راهنمای کامل خرید و فروش ارزهای دیجیتال",
+    "source": "BarzinCrypto Academy",
+    "url": "#",
+    "published_at": "2025-01-08T14:30:00Z",
+    "tags": ["Guide", "Trading"]
+  },
+  {
+    "id": "news6",
+    "title": "بهترین کیف پول‌های ارز دیجیتال سال 2025",
+    "source": "Crypto Security",
+    "url": "#",
+    "published_at": "2025-01-08T11:15:00Z",
+    "tags": ["Security", "Wallets"]
+  },
+  {
+    "id": "news7",
+    "title": "آموزش تحلیل تکنیکال برای مبتدیان",
+    "source": "Trading Education",
+    "url": "#",
+    "published_at": "2025-01-08T09:00:00Z",
+    "tags": ["Education", "Technical Analysis"]
+  },
+  {
+    "id": "news8",
+    "title": "DeFi چیست و چگونه کار می‌کند؟",
+    "source": "DeFi Guide",
+    "url": "#",
+    "published_at": "2025-01-07T15:20:00Z",
+    "tags": ["DeFi", "Education"]
+  }
+]
