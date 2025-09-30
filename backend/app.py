@@ -1,14 +1,14 @@
 import os
-from flask import Flask, request, jsonify, session, send_file, send_from_directory
+from flask import Flask, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_cors import CORS
 
-app = Flask(__name__, static_folder='public', static_url_path='')
+app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "super-secret-key-for-development-only-2024")
 
-# CORS configuration for session cookies
-CORS(app, supports_credentials=True, origins=["*"])
+# CORS configuration - allow all origins for now
+CORS(app, supports_credentials=True, origins=["*"], allow_headers=["Content-Type"])
 
 # Session configuration
 app.config['SESSION_COOKIE_SECURE'] = False  # For development
@@ -31,74 +31,16 @@ class NewsPost(db.Model):
     category = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-# React App Routes - Main application
+# Health check
 @app.route('/')
 def index():
-    return send_file('dist/index.html')
+    return jsonify({
+        'status': 'ok',
+        'message': 'BarzinCrypto API is running',
+        'version': '1.0.0'
+    })
 
-@app.route('/<path:filename>')  
-def react_static(filename):
-    # Handle React Router paths
-    if '.' not in filename:
-        return send_file('dist/index.html')
-    return send_from_directory('dist', filename)
-
-@app.route('/assets/<path:filename>')
-def assets(filename):
-    return send_from_directory('dist/assets', filename)
-
-# News page routes
-@app.route("/news")
-@app.route("/news/")
-def news_page():
-    return send_from_directory(app.static_folder, "news-inline.html")
-
-@app.route("/news.json")
-def news_json():
-    return send_from_directory(app.static_folder, "news.json")
-
-# AI Assistant page route
-@app.route("/ai")
-@app.route("/ai/")
-def ai_page():
-    return send_file('dist/index.html')
-
-# Auction page route  
-@app.route("/auction")
-@app.route("/auction/")
-def auction_page():
-    return send_file('dist/index.html')
-
-# VPN page route
-@app.route("/vpn")
-@app.route("/vpn/")
-def vpn_page():
-    return send_file('dist/index.html')
-
-# Terminal page route
-@app.route("/terminal")
-@app.route("/terminal/")
-def terminal_page():
-    return send_file('dist/index.html')
-
-# Education page route
-@app.route("/education")
-@app.route("/education/")
-def education_page():
-    return send_file('dist/index.html')
-
-# Auth pages routes
-@app.route("/auth/signin")
-@app.route("/auth/signin/")
-def signin_page():
-    return send_file('dist/index.html')
-
-@app.route("/auth/signup")
-@app.route("/auth/signup/")
-def signup_page():
-    return send_file('dist/index.html')
-
-# API Routes for React app
+# API Routes
 @app.route('/api/set-language/<lang>')
 def set_language(lang):
     print(f"Setting language to: {lang}")  # Debug log

@@ -3,7 +3,7 @@ node_modules/
 package-lock.json
 
 # Build outputs
-dist/
+# dist/ - commented out to include built frontend
 *.pyc
 __pycache__/
 
