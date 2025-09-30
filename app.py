@@ -1,6 +1,5 @@
 import os
 from flask import Flask, request, jsonify, session, send_file, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_cors import CORS
 
@@ -15,29 +14,9 @@ app.config['SESSION_COOKIE_SECURE'] = False  # For development
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# Database configuration
-# Use SQLITE_URL for SQLite, DATABASE_URL for PostgreSQL
-db_url = os.environ.get("SQLITE_URL") or os.environ.get("DATABASE_URL", "sqlite:///app.db")
-
-# Fix Render's DATABASE_URL if it's PostgreSQL format
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,
-}
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy(app)
-
-# Simple Models
-class NewsPost(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    category = db.Column(db.String(50), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+# Database disabled for now to avoid psycopg2 dependency issues
+# We'll use in-memory storage instead
+db = None
 
 # React App Routes - Main application
 @app.route('/')
@@ -358,53 +337,8 @@ def get_mock_prices():
     
     return mock_data
 
-# Initialize database with graceful handling
-def init_database():
-    """Initialize database with graceful error handling"""
-    try:
-        with app.app_context():
-            db.create_all()
-            print("✅ Database tables created successfully")
-            
-            # Create sample data if not exists
-            if NewsPost.query.count() == 0:
-                sample_news = [
-                    NewsPost(
-                        title='Bitcoin reaches near 100K USD level',
-                        content='Bitcoin price has shown significant growth in the last 24 hours and is now near the resistance level of 100 thousand dollars...',
-                        category='Market News'
-                    ),
-                    NewsPost(
-                        title='Technical Analysis Tutorial for Beginners',
-                        content='Technical analysis is one of the most important trading tools in the cryptocurrency market. In this tutorial you will learn...',
-                        category='Education'
-                    ),
-                    NewsPost(
-                        title='Best Cryptocurrency Wallets Guide',
-                        content='Choosing the right wallet for storing digital currencies is very important. We will introduce the best options below...',
-                        category='Guide'
-                    )
-                ]
-                
-                for news in sample_news:
-                    db.session.add(news)
-                
-                db.session.commit()
-                print("✅ Sample data created successfully")
-                
-    except Exception as e:
-        print(f"⚠️ Database initialization error: {e}")
-        print("📱 App will continue to run without database features")
-        return False
-    return True
-
-# Try to initialize database, but don't crash if it fails
-if os.environ.get("SKIP_DB") != "1":
-    try:
-        init_database()
-    except Exception as e:
-        print(f"⚠️ Could not initialize database: {e}")
-        print("📱 App will run without database features")
+# Database initialization disabled - using in-memory storage
+print("📱 Running without database (using in-memory storage)")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)
