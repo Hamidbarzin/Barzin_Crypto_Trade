@@ -15,12 +15,20 @@ app.config['SESSION_COOKIE_SECURE'] = False  # For development
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# Database configuration  
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///app.db")
+# Database configuration
+# Use SQLITE_URL for SQLite, DATABASE_URL for PostgreSQL
+db_url = os.environ.get("SQLITE_URL") or os.environ.get("DATABASE_URL", "sqlite:///app.db")
+
+# Fix Render's DATABASE_URL if it's PostgreSQL format
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 # Simple Models
@@ -392,7 +400,11 @@ def init_database():
 
 # Try to initialize database, but don't crash if it fails
 if os.environ.get("SKIP_DB") != "1":
-    init_database()
+    try:
+        init_database()
+    except Exception as e:
+        print(f"⚠️ Could not initialize database: {e}")
+        print("📱 App will run without database features")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)

@@ -11,7 +11,7 @@ services:
         value: CG-qyvm6UNyfsbBg5kSVLyy6bKS
       - key: SESSION_SECRET
         generateValue: true
-      - key: DATABASE_URL
+      - key: SQLITE_URL
         value: sqlite:///app.db
       - key: PYTHON_VERSION
         value: "3.11.9"
